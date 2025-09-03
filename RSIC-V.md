@@ -45,7 +45,10 @@ uart_tx：串口发送模块，主要用于调试打印。
 gpio：简单的IO口模块，主要用于点灯调试。  
 spi：目前只有master角色，用于访问spi从机，比如spi norflash。  
 
+RSIC-V 干净、开源  设计CPU SOC 开发能力
 
 
 **步骤1：环境搭建**
+LINUX 和 windows 我都准备跑一遍
+先跑VMWare  由于之前的centos7是直接移植的，这次准备跟着视频重新从零开始装个新的，安装包下载3小时，明天再继续搭环境。
 
