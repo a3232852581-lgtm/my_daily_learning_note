@@ -35,7 +35,26 @@ o：八进制（Octal）
 Verilog里的线是定向的，将右边的值驱动到左边
 是连续的，不是一次性的  
 
-**Four Wire** 
-注意，当你使用=代表wire时，最前面要有assign不然会报错
+**Four Wire**   
+注意，当你使用=代表wire时，最前面要有assign不然会报错  
+
+**Notgate**  
+非操作 可以使用 按位取反~  和 逻辑取反!  
+用“ - ”不行  
+逻辑取反是 将真值翻转：非零 变 0，零 变 1，返回一个单比特的布尔值：1‘b0 或 1’b1  
+
+**Andgate**  
+与   bitwise-AND (&) and logical-AND (&&)    
+
+**Norgate** 
+bitwise-OR (|) and logical-OR (||) operators
+做或非的时候要注意加括号      assign out = ~(a|b);    
+**XNorgate**   
+The bitwise-XOR operator is ^. There is no logical-XOR operator.  
+    assign out = a^~b  
+
+**Declaring wires**   
+声明一个wire 用于连接
 
 
+再写一个多个门的时候，您可以选择使用一个赋值语句来驱动每条输出线，或者您可以选择声明（多）条线作为中间信号，其中每条内部线由一个与门的输出驱动。
