@@ -21,7 +21,7 @@ RISC-V 是一个基于精简指令集（RISC） 原则的开源、免费的指�
 
 TCK	全称Test Clock  	      
 |方向 输入	|为JTAG调试逻辑提供同步时钟	时钟信号，频率独立于系统主时钟  
-TMS	全称Test Mode Select  	
+TMS	全称Test Mode Select  
 |方向 输入	|控制JTAG状态机的转换路径	在TCK上升沿被采样  
 TDI	全称Test Data In  	    
 |方向 输入	|将调试指令或数据串行移入CPU内部的JTAG调试模块	在TCK上升沿被采样  
