@@ -6,11 +6,7 @@
 开始今日练习
 Q1 We want to assign 1 to the output one.  
 `module top_module( output one );`
-	
 `	assign one = 1'b1;`
-	
 `endmodule`
 
-
-
-注意：
+注意：1'b1代表了2进制形式的1，最好不要省略'b1
