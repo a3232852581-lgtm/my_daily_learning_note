@@ -57,4 +57,24 @@ The bitwise-XOR operator is ^. There is no logical-XOR operator.
 声明一个wire 用于连接
 
 
-再写一个多个门的时候，您可以选择使用一个赋值语句来驱动每条输出线，或者您可以选择声明（多）条线作为中间信号，其中每条内部线由一个与门的输出驱动。
+再写一个多个门的时候，您可以选择使用一个赋值语句来驱动每条输出线，或者您可以选择声明（多）条线作为中间信号，其中每条内部线由一个与门的输出驱动。  
+
+**Vector** 
+向量 例：wire [99:0] my_vector; 
+
+wire [2:0] a, c;   // Two vectors
+assign a = 3'b101;  // a = 101
+assign b = a;       // b =   1  implicitly-created wire
+assign c = b;       // c = 001  <-- bug
+my_module i1 (d,e); // d and e are implicitly one-bit wide if not declared.
+                    // This could be a bug if the port was intended to be a vector.
+
+b被隐性赋值，导致 b只是1位的1，c只有c[0]被赋值了
+
+`default_nettype none
+添加这行后，任何未声明的标识符都会导致编译错误，从而迫使你立刻发现并修复问题。
+
+reg [7:0] mem [255:0]; 使用这样的方法后，若要调用其中一个值，要经过以下步骤
+
+wire [7:0] data_out; // 一个8位的线网用来接收数据
+assign data_out = mem[5]; // 读取地址5的内容
