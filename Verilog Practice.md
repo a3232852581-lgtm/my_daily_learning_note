@@ -8,8 +8,9 @@ Q1 We want to assign 1 to the output one.
 
 module top_module( output one );
 	
- assign one = 1'b1;
-
+	assign one = 1'b1;
+	
 endmodule
+
 
 注意：
