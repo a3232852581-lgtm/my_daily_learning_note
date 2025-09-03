@@ -5,12 +5,12 @@
 2025/9/3  
 开始今日练习
 Q1 We want to assign 1 to the output one.  
-
-module top_module( output one );
+`module top_module( output one );
 	
 	assign one = 1'b1;
 	
-endmodule
+endmodule`
+
 
 
 注意：
