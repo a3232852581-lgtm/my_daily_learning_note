@@ -87,3 +87,97 @@ assign data_out = mem[5]; // 读取地址5的内容
 同理逻辑或也会一直是1
 outnot 是b为高a为低 b为高时去反为000 a取反为111（7）110（6） 101（5）。。。
 第二段第一个数： b取反111 a取反111  111111=3F 之后同理
+
+
+**Gates4**
+    assign out_and = in[0]&in[1]&in[2]&in[3];  
+    assign out_or = in[0]|in[1]|in[2]|in[3];  
+    assign out_xor = in[0]^in[1]^in[2]^in[3];  
+
+可以写成单目形式 assign out_and = &in;   缩位运算
+把一长串数据挤压（Reduce）成一个单一的比特值  
+
+4'ha 和 4'd10 在数值上是等价的
+{4'ha, 4'd10} => 8'b10101010  在使用这种连接方法时，必须确定用于连接的每个向量的长度  
+
+assign out[15:0] = {in[7:0], in[15:8]};     
+assign out = {in[7:0], in[15:8]};   
+这两行的不同在于 例如如果out是32位 前一行只会对低16位赋值，后一行会不止赋值低16还会将高16赋值0
+如果out是8位 前一行直接报错，后一行截断，不报错
+
+assign z = {e[0],f[4:0],2'b11}; z为8位，11必须标出位数，不然报错
+
+
+module top_module (
+    input [4:0] a, b, c, d, e, f,
+    output [7:0] w, x, y, z );//
+    assign w = {a[4:0],b[4:2]};
+    assign x = {b[1:0],c[4:0],d[4]};
+    assign y = {d[3:0],e[4:1]};
+    assign z = {e[0],f[4:0],2'b11};
+    // assign { ... } = { ... };
+
+endmodule
+
+这种写法太麻烦！其实只需要  
+assign {w,x,y,z} = { a, b, c, d, e, f, 2'b11};就可以一起处理  
+系统会自动分配结果给w，x，y，z  
+
+**Reversing a longer vector**
+
+assign {out[0],out[1],out[2],out[3],out[4],out[5],out[6],out[7]} = in;
+可以直接翻转，不用打8行
+或者 assign out = {in[0]  ....... 也可以
+
+连接的另一种方法：{num{vector}}
+
+注意：in[7]是属于变量而非常量  
+24{in[7]}用于拼接时在外面要再多打一个括号，就像下面
+{3'd5, {2{3'd6}}}
+
+
+**module**  
+By position mod_a instance1 ( wa, wb, wc );   直接连接了 wa，wb和wc
+By name mod_a instance2 ( .out(wc), .in1(wa), .in2(wb) );  
+mod_a 模块名，它从哪里来？ 它是在另一个 Verilog 文件中已经定义好的一个模块  
+instance2   这是你为这个具体的实例起的名字，也称为实例名（Instance name）  
+.<port_name>(<signal_name>) 语法详解：
+
+.：一个点，表示开始连接一个端口。
+
+<port_name>：mod_a 模块蓝图中定义的端口名称（如 out, in1, in2）。这必须是完全一致的名字。
+
+(<signal_name>)：当前模块中存在的实际信号名称，你要把 mod_a 的端口连接到这些信号上。这些信号可以是 input, output, wire, reg 等。  
+
+wire [7:0]q0,[7:0]q1,[7:0]q2; 这样声明是有问题的，只能wire [7:0] q0, q1, q2;，如果长度不一样必须要分开写
+
+ always @(*) begin
+        case (sel)
+        2'b00: q <= d; // 00时输出d
+        2'b01: q <= q0; // 01时输出q0
+        2'b10: q <= q1; // 全零时输出q1
+        default: q <= q2;     // 其他情况输出q2
+    endcase
+end
+
+四位选择器，使用了always +  case方法分类  
+(*)  代表组合逻辑电路
+
+= 是 阻塞赋值（Blocking Assignment）
+一位全加器  
+assign {cout,sum} = a+b+cin;
+<= 是 非阻塞赋值（Non-Blocking Assignment）  
+
+ 黄金法则：
+   - 在描述组合逻辑的always块中使用阻塞赋值（=）。
+   - 在描述时序逻辑的always块中使用非阻塞赋值（<=）。
+例：
+always @(posedge clk) begin
+    reg1 <= in1;  // 这些赋值同时发生
+    reg2 <= reg1; // 使用reg1的旧值，不是上面刚赋的值
+    reg3 <= reg2; // 使用reg2的旧值
+end
+
+verilog 可以用资源换速度   异或的 verilog符号： `^`
+
+减法器合并  The net result is a circuit that can do two operations: (a + b + 0) and (a + ~b + 1).  用一个信号切换b的正反即可   （补码 = 反码+1）
