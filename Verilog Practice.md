@@ -181,3 +181,7 @@ end
 verilog 可以用资源换速度   异或的 verilog符号： `^`
 
 减法器合并  The net result is a circuit that can do two operations: (a + b + 0) and (a + ~b + 1).  用一个信号切换b的正反即可   （补码 = 反码+1）
+
+
+![导入图片](images/2025090401.png)
+在上升沿时always @(posedge clk)begin才会发生变化，组合电路变成1的那个时刻clk不是上升沿，所以比组合电路满了一个上升沿周期
