@@ -153,10 +153,10 @@ wire [7:0]q0,[7:0]q1,[7:0]q2; 这样声明是有问题的，只能wire [7:0] q0,
 
  always @(*) begin
         case (sel)
-        2'b00: q <= d; // 00时输出d
-        2'b01: q <= q0; // 01时输出q0
-        2'b10: q <= q1; // 全零时输出q1
-        default: q <= q2;     // 其他情况输出q2
+        2'b00: q = d; // 00时输出d
+        2'b01: q = q0; // 01时输出q0
+        2'b10: q = q1; // 全零时输出q1
+        default: q = q2;     // 其他情况输出q2
     endcase
 end
 
@@ -185,3 +185,119 @@ verilog 可以用资源换速度   异或的 verilog符号： `^`
 
 ![导入图片](images/2025090401.png)
 在上升沿时always @(posedge clk)begin才会发生变化，组合电路变成1的那个时刻clk不是上升沿，所以比组合电路满了一个上升沿周期
+
+优先编码器  从小的位开始和1’b1比较即可
+
+注：always里使用if里也要有begin end
+
+注意 ： 使用if时需要else 给他赋一个其他情况的固定值防止乱飞
+
+8'bzzzzzzz1: pos = 3'd0; 在casez 里可以表示最后一位为1的所有数
+**case/casez/casex 语句的核心逻辑 ——“匹配即跳出**
+只要第一个赋值成功了就不会再进行后面的赋值
+
+
+4个数取最小  
+我的写法：
+module top_module (
+    input [7:0] a, b, c, d,
+    output [7:0] min);//
+    reg [7:0]ab,cd;
+    always @(*) begin
+        ab = (a>b)? b:a;
+        cd = (c>d)? d:c;
+        min = (ab>cd)?cd:ab;
+    end
+    // assign intermediate_result1 = compare? true: false;
+
+endmodule
+
+up写法  assign 其实差不多
+
+奇校验  偶校验
+
+for循环  
+module top_module( 
+    input [99:0] in,
+    output reg [99:0] out  // 将输出声明为 reg 类型
+);
+    
+    // 在 always 块外部声明循环变量
+    integer i;  // 或者使用 reg [6:0] i;（7位可以表示0-127）
+    
+    always @(*) begin
+        for (i = 0; i < 100; i = i + 1) begin
+            out[i] = in[99-i];  // 将输入向量反转
+        end
+    end
+
+endmodule
+
+注意 使用1时尽量用1'b1
+
+**使用计数时，切记一定要初始化！！！**
+module top_module( 
+    input [254:0] in,
+    output reg[7:0] out );
+    integer i;
+    always @(*) begin
+        out = 8'b0;
+        for(i=0;i<255;i=i+1) begin
+            if(in[i] == 1'b1)begin
+                out = out+1'b1;
+            end
+        end
+    end
+
+endmodule
+
+其实直接写out = out+in[i] 就行，因为只有在1的时候才会加1 我这里的if多余了
+
+100位全加器   
+我的写法  
+module top_module( 
+    input [99:0] a, b,
+    input cin,
+    output [99:0] cout,
+    output [99:0] sum );
+    integer i;
+    reg [100:0]cin1;
+    always @(*)begin
+        cin1[0] = cin;
+        for(i = 0;i<100;i=i+1)begin
+            {cin1[i+1],sum[i]} = cin1[i] + a[i] + b[i];
+            cout[i] = cin1[i+1];
+        end
+    end
+
+endmodule
+使用generate的写法
+module top_module( 
+    input [99:0] a, b,
+    input cin,
+    output [99:0] cout,
+    output [99:0] sum );
+    generate
+        genvar i;
+        for(i = 0;i<100;i=i+1)begin:adder
+            if(i==0)begin
+                fulladder fulladder1(a[i],b[i],cin,cout[i],sum[i]);
+            end
+            else begin
+                fulladder fulladder2(a[i],b[i],cout[i-1],cout[i],sum[i]);
+            end
+        end
+    endgenerate
+
+endmodule
+
+module fulladder(
+    input a,b,cin,
+    output cout,sum
+);
+    assign {cout,sum} = a + b + cin;
+endmodule  
+
+其实就是定义了一个全加器然后循环了100遍，第一遍的输出比较独立就单独拉了出来
+
+genvar是一个标量，不能 给位宽
