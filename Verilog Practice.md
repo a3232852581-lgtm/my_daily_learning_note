@@ -216,88 +216,116 @@ up写法  assign 其实差不多
 
 奇校验  偶校验
 
-for循环  
-module top_module( 
-    input [99:0] in,
-    output reg [99:0] out  // 将输出声明为 reg 类型
-);
+for循环    
+module top_module(   
+    input [99:0] in,  
+    output reg [99:0] out  // 将输出声明为 reg 类型  
+);  
+      
+    // 在 always 块外部声明循环变量  
+    integer i;  // 或者使用 reg [6:0] i;（7位可以表示0-127）  
     
-    // 在 always 块外部声明循环变量
-    integer i;  // 或者使用 reg [6:0] i;（7位可以表示0-127）
-    
-    always @(*) begin
-        for (i = 0; i < 100; i = i + 1) begin
-            out[i] = in[99-i];  // 将输入向量反转
-        end
-    end
+    always @(*) begin  
+        for (i = 0; i < 100; i = i + 1) begin  
+            out[i] = in[99-i];  // 将输入向量反转  
+        end  
+    end  
 
-endmodule
+endmodule  
 
 注意 使用1时尽量用1'b1
 
 **使用计数时，切记一定要初始化！！！**
-module top_module( 
-    input [254:0] in,
-    output reg[7:0] out );
-    integer i;
-    always @(*) begin
-        out = 8'b0;
-        for(i=0;i<255;i=i+1) begin
-            if(in[i] == 1'b1)begin
-                out = out+1'b1;
-            end
-        end
-    end
+module top_module(   
+    input [254:0] in,  
+    output reg[7:0] out );  
+    integer i;  
+    always @(*) begin  
+        out = 8'b0;  
+        for(i=0;i<255;i=i+1) begin  
+            if(in[i] == 1'b1)begin  
+                out = out+1'b1;  
+            end  
+        end  
+    end  
 
-endmodule
+endmodule  
 
 其实直接写out = out+in[i] 就行，因为只有在1的时候才会加1 我这里的if多余了
 
-100位全加器   
-我的写法  
-module top_module( 
-    input [99:0] a, b,
-    input cin,
-    output [99:0] cout,
-    output [99:0] sum );
-    integer i;
-    reg [100:0]cin1;
-    always @(*)begin
-        cin1[0] = cin;
-        for(i = 0;i<100;i=i+1)begin
-            {cin1[i+1],sum[i]} = cin1[i] + a[i] + b[i];
-            cout[i] = cin1[i+1];
-        end
-    end
+100位全加器     
+我的写法    
+module top_module(   
+    input [99:0] a, b,  
+    input cin,  
+    output [99:0] cout,  
+    output [99:0] sum );  
+    integer i;  
+    reg [100:0]cin1;  
+    always @(*)begin  
+        cin1[0] = cin;  
+        for(i = 0;i<100;i=i+1)begin  
+            {cin1[i+1],sum[i]} = cin1[i] + a[i] + b[i];  
+            cout[i] = cin1[i+1];  
+        end  
+    end  
 
-endmodule
-使用generate的写法
-module top_module( 
-    input [99:0] a, b,
-    input cin,
-    output [99:0] cout,
-    output [99:0] sum );
-    generate
-        genvar i;
-        for(i = 0;i<100;i=i+1)begin:adder
-            if(i==0)begin
-                fulladder fulladder1(a[i],b[i],cin,cout[i],sum[i]);
-            end
-            else begin
-                fulladder fulladder2(a[i],b[i],cout[i-1],cout[i],sum[i]);
-            end
-        end
-    endgenerate
+endmodule  
+使用generate的写法  
+module top_module(   
+    input [99:0] a, b,  
+    input cin,  
+    output [99:0] cout,  
+    output [99:0] sum );  
+    generate  
+        genvar i;  
+        for(i = 0;i<100;i=i+1)begin:adder  
+            if(i==0)begin  
+                fulladder fulladder1(a[i],b[i],cin,cout[i],sum[i]);  
+            end  
+            else begin  
+                fulladder fulladder2(a[i],b[i],cout[i-1],cout[i],sum[i]);  
+            end  
+        end  
+    endgenerate  
+    
 
-endmodule
-
-module fulladder(
-    input a,b,cin,
-    output cout,sum
-);
-    assign {cout,sum} = a + b + cin;
 endmodule  
 
-其实就是定义了一个全加器然后循环了100遍，第一遍的输出比较独立就单独拉了出来
+module fulladder(  
+    input a,b,cin,  
+    output cout,sum  
+);  
+    assign {cout,sum} = a + b + cin;  
+endmodule    
 
-genvar是一个标量，不能 给位宽
+其实就是定义了一个全加器然后循环了100遍，第一遍的输出比较独立就单独拉了出来  
+ 
+genvar是一个标量，不能 给位宽  
+
+generate 块通常用于需要重复实例化模块或根据参数条件生成不同逻辑的场景。  
+
+
+module top_module(   
+    input [3:0] in,  
+    output [2:0] out_both,  
+    output [3:1] out_any,  
+    output [3:0] out_different );  
+    integer i;  
+    always @(*)begin  
+        for(i=0;i<3;i=i+1)begin  
+            out_both[i] = in[i]&in[i+1];  
+            out_any[i+1] = in[i+1]|in[i];  
+            out_different[i] = in[i]^in[i+1];  
+        end  
+        out_different[3] = in[3]^in[0];  
+    end  
+    
+
+endmodule  
+
+可以直接写成      
+assign out_both = in[2:0]&in[3:1];  
+assign out_any = in[2:0]|in[3:1];  
+assign out_different = in^(in[0],in[3:1]);  
+**用移位可以代替循环的作用**
