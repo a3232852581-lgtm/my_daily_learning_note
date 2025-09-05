@@ -327,5 +327,6 @@ endmodule
 可以直接写成      
 assign out_both = in[2:0]&in[3:1];  
 assign out_any = in[2:0]|in[3:1];  
-assign out_different = in^(in[0],in[3:1]);  
+assign out_different = in^{in[0],in[3:1]};  
 **用移位可以代替循环的作用**
+对于更长的向量也一样
