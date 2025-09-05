@@ -330,3 +330,282 @@ assign out_any = in[2:0]|in[3:1];
 assign out_different = in^{in[0],in[3:1]};  
 **用移位可以代替循环的作用**
 对于更长的向量也一样
+
+列真值表，求逻辑表达式是一种写模块的方法  
+assign out = (sel&b)|((!sel)&a);  
+从数据传输描述（数据流描述）
+sel?b:a;
+逻辑 if else
+
+
+module top_module( 
+    input [1023:0] in,  
+    input [7:0] sel,  
+    output [3:0] out );  
+    always @* begin  
+        out = in[sel*4 + 3 -: 4];    
+    end  
+
+endmodule  
+注意，out = in[sel*4 + 3 -: 4];代表从sel*4 + 3小于它的4位
+写in[sel*4 + 3 : sel*4]是错误的
+也可以使用拼接符
+
+全加器  
+    assign {cout,sum} = a + b + cin;  
+
+module top_module (  
+    input [3:0] x,  
+    input [3:0] y,   
+    output [4:0] sum);  
+    assign sum = x + y;  
+
+endmodule  
+这里sum比xy高一位，直接相加即可
+
+
+module top_module (  
+    input [7:0] a,  
+    input [7:0] b,  
+    output [7:0] s,  
+    output overflow  
+); //  
+     assign s = a + b;  
+    assign overflow =  a + b -s;  
+
+endmodule
+这种写法是错误的！ a + b会截取8位和进行计算  
+因该写assign overflow = (a[7] & b[7]) | (a[7] & ~s[7]) | (b[7] & ~s[7]);  
+
+99位全加器  
+module top_module(   
+    input [99:0] a, b,  
+    input cin,  
+    output cout,  
+    output [99:0] sum );  
+    wire [99:0] cout1;  
+    generate  
+        genvar i ;  
+        for(i = 0;i<100;i=i+1)begin:add100  
+            if(i == 0)  
+                add add1(a[i],b[i],cin,cout1[i],sum[i]);  
+            else  
+                add add1(a[i],b[i],cout1[i-1],cout1[i],sum[i]);  
+         end
+    endgenerate  
+    assign cout = cout1[99];  
+
+endmodule  
+
+module add(   
+    input a, b, cin,  
+    output cout, sum );  
+    assign {cout,sum} = a + b + cin;   
+endmodule  
+
+
+其实直接写成  
+module top_module(   
+    input [99:0] a, b,  
+    input cin,  
+    output cout,  
+    output [99:0] sum );  
+
+    assign {cout,sum} = a+b+cin;  
+
+endmodule 就行  
+
+卡诺图 SOP  直接取1的就行
+POS  取0的，取完之后  每个值取反，或与互换
+
+
+module top_module (
+    input c,  
+    input d,  
+    output [3:0] mux_in  
+); 
+    assign mux_in[0] = (c?1:(d?1:0));  
+    assign mux_in[1] = 0;  
+    assign mux_in[2] = ~d;  
+    assign mux_in[3] = c&d;  
+
+endmodule  
+用这种(c?1:(d?1:0))是可以嵌套的，用来达成else if 的目的
+
+
+
+
+Clocked: always @(posedge clk)使用时钟触发    上升沿
+注意在使用时钟时不使用=  改为使用<=  
+
+always @(negedge clk)begin  
+        q <= reset? 8'h34 : d;  
+    end  
+下降沿触发
+
+active high asynchronous reset 高电平有效的异步复位
+意思就是只要reset = 1就复位，不用等时钟
+always @(posedge clk or posedge areset)begin  
+        if(areset) q<= 8'h34;  
+        else  q <= d;  
+    end  
+    这样always模块在clk和reset的上升沿都可以触发  
+
+    resetn is a synchronous, active-low reset. 意思是这是低位触发的复位器
+
+    锁存器 与时钟无关 有圆圈：低电平有效
+
+module top_module (  
+	input clk,  
+	input L ,  
+	input r_in,  
+	input q_in,  
+	output reg Q);  
+    wire d;  
+    assign d = L?r_in:q_in;  
+    always @(posedge clk)begin  
+        Q <= d;  
+    end  
+
+endmodule  
+子模块触发器，仅供参考
+module top_module (
+	input clk,
+	input L,
+	input r_in,
+	input q_in,
+	output reg Q);
+    reg q1,q2,q3;
+    top top1(q_in,r_in,L,clk,q1);
+    top top2(q1,r_in,L,clk,q2);
+    assign q3 = Q^q2;
+    top top3(q3,r_in,L,clk,Q);
+
+endmodule
+
+module top (
+	input d1,
+	input d2,
+	input L1,
+	input clk,
+	output reg Q);
+    wire d;
+    assign d = L1?d2:d1;
+    always @(posedge clk)begin
+        Q <= d;
+    end
+
+endmodule
+
+DFF and gates
+module top_module (
+    input clk,
+    input x,
+    output z
+); 
+    reg mid1,mid2,mid3;
+    
+    DFFT DFF1(clk,(x^mid1),mid1);
+    DFFT DFF2(clk,(x&~mid2),mid2);
+    DFFT DFF3(clk,(x|~mid3),mid3);
+    assign z = ~(mid1|mid2|mid3);
+    
+
+endmodule
+
+module DFFT (
+    input clk,
+    input x,
+    output q1
+); 
+    always @(posedge clk)begin
+        q1 <= x;
+    end
+
+endmodule
+
+jk触发器
+J	K	Q
+0	0	Qold
+0	1	0
+1	0	1
+1	1	~Qold
+
+怎么找上升沿？ 打拍
+怎么延迟一个时钟周期？ 一个一位d触发器  
+
+module top_module (  
+    input clk,  
+    input [7:0] in,  
+    output [7:0] pedge  
+);  
+    reg [7:0] in_1;  
+    always @(posedge clk)begin  
+        in_1 <= in;  
+        pedge <= in&~in_1; //这个周期上升时是pedge取1 ，这里的in_1是上个周期的  
+    end  
+
+endmodule  
+
+module top_module (  
+    input clk,  
+    input [7:0] in,  
+    output [7:0] anyedge  
+);  
+    reg [7:0] in_1;    
+    always @(posedge clk)begin   
+            in_1 <= in;  
+            anyedge <= in^in_1; //上升和下降沿都给   
+    end    
+
+endmodule  
+
+
+对各个位的捕获  捕获下降，不下降时保持，每个位独立
+module top_module (  
+    input clk,  
+    input reset,  
+    input [31:0] in,  
+    output [31:0] out  
+);  
+    reg [31:0] in_1;  
+    integer i;  
+    always @(posedge clk)begin  
+        in_1 <= in;  
+        for(i=0;i<32;i=i+1)begin  
+            if(reset) out[i]<=32'b0;     
+            else out[i] <= (in_1[i]&(~in[i]))?in_1[i]:out[i];  
+        end  
+    end  
+endmodule  
+
+上升下降沿都赋值
+module top_module (  
+    input clk,  
+    input d,  
+    output q  
+);  
+    reg q1,q2;  
+    always @(posedge clk)begin  
+        q1 <=d;  
+    end  
+    always @(negedge clk)begin  
+        q2 <=d;  
+    end  
+    assign q= clk?q1:q2;  
+
+endmodule  用q1 | q2不行，q1 | q2 的逻辑本质是 “只要任一边沿采样到 1，输出就为 1”  
+例如在两个时钟沿中间  假设在一个上升沿 d =0 ，q原本为1，此时只有上升沿的q1成功跟随变为了0，但是下降沿的q2的值仍为1，取|得到的值为1，运算错误  
+总结：在使用这种上升下降沿都触发的情况下，要使用clk?来分类是上升还是下降
+
+计数器  
+module top_module (  
+    input clk,  
+    input reset,      // Synchronous active-high reset  
+    output [3:0] q);  
+    always @(posedge clk)begin  
+        if(reset) q <= 4'b0;  
+        else q <= q+4'b1;  
+    end  
+   
+endmodule  
