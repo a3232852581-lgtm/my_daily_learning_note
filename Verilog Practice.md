@@ -780,5 +780,600 @@ module Count10 (
     end    
 
 endmodule   
-参考，主要是他写的使能信号，比我写的要好很多，不容易出错  
-![导入图片](images/2025090801.png)
+参考，主要是他写的使能信号，比我写的要好很多，不容易出错   
+他的时钟用的是24进制，分成了两半  
+![导入图片](images/2025090801.png)  
+
+
+
+
+向右移位器  
+module top_module(  
+    input clk,  
+    input areset,  // async active-high reset to zero  
+    input load,  
+    input ena,  
+    input [3:0] data,  
+    output reg [3:0] q);   
+       
+    always @(posedge clk or posedge areset)begin  
+        if(areset)  
+            q <= 4'd0;  
+        else if(load)  
+            q <= data;  
+        else if(ena)begin  
+            q[3] <= 1'b0;  
+            q[2] <= q[3];  
+            q[1] <= q[2];  
+            q[0] <= q[1];  
+        end  
+            
+    end  
+    
+
+endmodule  
+
+
+
+旋转寄存器  
+module top_module(
+    input clk,
+    input load,
+    input [1:0] ena,
+    input [99:0] data,
+    output reg [99:0] q); 
+    integer i;
+    reg q1;
+    always @(posedge clk)begin
+        if(load) q <= data;
+        else if(ena == 2'b01)begin
+            q <= {q[0],q[99:1]}; //注意，这样移位会方便很多！记住
+        end
+        else if(ena == 2'b10)begin
+            q <= {q[98:0],q[99]};
+        end
+        else q <= q;
+    end
+        
+
+endmodule
+
+如果写成else if(ena == 2'b01)begin  
+            q1 <= q[0];  
+            for(i=0;i<99;i=i+1)begin
+                q[i] <= q[i+1];  
+            end  
+            q[99] <= q1;  
+        end  
+会出现一个问题，q[99]实际上接收到的是上个周期的q1  ，如果真的要这么写，只能用组合逻辑  
+
+
+
+
+
+shift18  
+
+module top_module(
+    input clk,
+    input load,
+    input ena,
+    input [1:0] amount,
+    input [63:0] data,
+    output reg [63:0] q); 
+    always @(posedge clk)begin
+        if(load)begin
+            q<= data;
+        end
+        else if (ena) begin
+            case (amount)
+                2'b00: q <= {q[62:0], 1'b0};         // 左移1位
+                2'b01: q <= {q[55:0], 8'd0};         // 左移8位
+                2'b10: q <= {q[63],q[63:1]};        // 算术右移1位
+                2'b11: q <= {{8{q[63]}},q[63:8]};     // 算术右移8位  注意！8{q[63]}外面要再加一层{}不然会报错
+            endcase
+        end
+        else  q <= q;
+    end
+
+endmodule  
+
+
+
+伽罗瓦线性反馈移位寄存器  
+module top_module(  
+    input clk,  
+    input reset,      // Active-high synchronous reset to 5'h1
+    output [4:0] q  
+);   
+    always @(posedge clk)begin  
+        if(reset) q<=5'h1;  
+        else begin  
+            q[4] <= 1'b0^q[0];  
+            q[3] <= q[4];  
+            q[2] <= q[3]^q[0];  
+            q[1] <= q[2];   
+            q[0] <= q[1];  //可以用大括号写在一行内
+        end  
+    end  
+        
+
+endmodule  
+
+
+3位LFSR    
+module top_module (  
+	input [2:0] SW,      // R  
+	input [1:0] KEY,     // L and clk 
+	output [2:0] LEDR);  // Q  
+    always @(posedge KEY[0])begin  
+        LEDR <= {(KEY[1]?SW[2]:(LEDR[1]^LEDR[2])),(KEY[1]?SW[1]:LEDR[0]),(KEY[1]?  SW[0]:LEDR[2])};  
+    end  
+
+
+endmodule  
+
+32位LFSR  
+module top_module(
+    input clk,
+    input reset,    // Active-high synchronous reset to 32'h1
+    output [31:0] q
+); 
+    integer i;
+    
+    always @(posedge clk)begin
+        if(reset) q <= 32'd1;
+        else begin
+            for(i=0;i<32;i=i+1)begin
+                if(i == 5'd0) q[0] <= q[1]^q[0];
+                else if(i == 5'd1) q[1] <= q[2]^q[0];
+                else if(i == 5'd21) q[21] <= q[22]^q[0];
+                else if(i == 5'd31) q[31] <= 1'b0^q[0];
+                else q[i] <= q[i+1]; //如果要用一行的方法，就把1，2，22，32单独用wire表示一下先计算出来，再在大括号里移位
+            end
+        end           
+    end
+endmodule
+
+
+移位器  
+module top_module (
+    input clk,
+    input resetn,   // synchronous reset
+    input in,
+    output out);
+    reg q1,q2,q3;
+    always @(posedge clk)begin
+        if(!resetn)begin
+            out <= 1'b0;
+            q1 <= 1'b0;
+            q2 <= 1'b0;
+            q3 <= 1'b0;  //可以直接写{out,q1,q2,q3} <= 4'b0;
+        end
+        else begin
+            q1 <= in;
+            q2 <= q1;
+            q3 <= q2;
+            out <= q3;//{out,q3,q2,q1} <= {q3,q2,q1,in};
+        end
+    end
+
+endmodule
+
+n位移位器 
+module top_module (  
+    input [3:0] SW,  
+    input [3:0] KEY,  
+    output [3:0] LEDR  
+);   
+    MUXDFF mux1( KEY[0],LEDR[1],SW[0],KEY[1],KEY[2],LEDR[0]);  
+    MUXDFF mux2( KEY[0],LEDR[2],SW[1],KEY[1],KEY[2],LEDR[1]);  
+    MUXDFF mux3( KEY[0],LEDR[3],SW[2],KEY[1],KEY[2],LEDR[2]);  
+    MUXDFF mux4( KEY[0],KEY[3],SW[3],KEY[1],KEY[2],LEDR[3]);  
+
+endmodule  
+
+module MUXDFF  (    
+    input clk,  
+    input w, R, E, L,  
+    output Q  
+);  
+    always @(posedge clk)begin  
+        Q <= L?R:(E?w:Q);  
+    end  
+
+endmodule  
+
+
+移位+选择  
+module top_module (  
+    input clk, 
+    input enable,  
+    input S,  
+    input A, B, C,  
+    output Z );  
+    reg [7:0]M;  
+    wire [2:0]select;  
+    always @(posedge clk)begin  
+        if(enable) M <= {M[6:0],S};  
+    end  
+    assign select = {A,B,C};  
+    assign Z = M[select];  
+  
+endmodule  
+
+
+
+rule 90  
+module top_module(  
+    input clk,  
+    input load,  
+    input [511:0] data,  
+    output [511:0] q );   
+    integer i;  
+    always @(posedge clk)begin  
+        if(load) q <= data;  
+        else begin  
+            q[511] <= q[510];  
+            q[0] <= q[1];  
+            for(i = 1;i<511;i=i+1)begin  
+                q[i] <= q[i-1]^q[i+1];  
+            end  
+        end //可以直接用 q <= {1'b0,q[511:1]}^{q[510:0],1'b0};
+    end  
+    
+
+endmodule  
+
+
+
+
+rule 110   
+
+module top_module(  
+    input clk,  
+    input load,  
+    input [511:0] data,  
+    output [511:0] q  
+);   
+    always @(posedge clk)begin    
+        if(load) q <= data;    
+        else begin    
+            q <= ~q&(q<<1)|q&~(q<<1)|(q<<1)&~(q>>1);//因为左右移位自动补的数就是0所以可以这么做  
+        end  
+    end    
+
+endmodule 
+
+
+
+
+
+Conwaylife  扩展矩阵
+ 
+module top_module(  
+    input clk,  
+    input load,  
+    input [255:0] data,  
+    output [255:0] q );   
+    wire [323:0]ex;  
+    integer i,j,z;  
+    reg [3:0]count;  
+    always @(*)begin  
+        ex[17:0] = {q[240],q[255:240],q[255]};  
+        ex[323:306] = {q[0],q[15:0],q[15]};  
+        for(i=1;i<17;i=i+1)begin  
+            ex[18*i +: 18] = {q[16*(i-1)],q[16*i-16 +:16],q[16*i-1]};                     
+        end  
+    end  
+    always @(posedge clk)begin  
+        if(load) q <= data;  
+        else begin  
+            for(j=0;j<16;j=j+1)begin  
+                for(z=0;z<16;z=z+1)begin  
+                    count = ex[18*j+z+1-1] + ex[18*j+z+1] + ex[18*j+z+1+1] + ex[18*(j+1)+z+1-1]+ ex[18*(j+1)+z+1+1]  //要放外面算的！会有时序问题
+                    + ex[18*(j+2)+z+1-1]+ ex[18*(j+2)+z+1]+ ex[18*(j+2)+z+1+1];  
+                    case(count)  
+                        4'd2: q[16*j+z] <= q[16*j+z];  
+                        4'd3: q[16*j+z] <= 1'b1; 
+                        default: q[16*j+z] <= 1'b0;  
+                    endcase  
+                    
+                end  
+            end  
+        end  
+    end  
+endmodule  
+其实应该把clk里的计算拉出来单独写一个，因为这样写的话ex会用前一时刻的q计算，但是仿真过了。。。。就先不改了先放在这，实际是有问题的  
+
+
+
+
+有限状态机  
+ Moore state    
+ module top_module(  
+    input clk,  
+    input areset,    // Asynchronous reset to state B  
+    input in,  
+    output out);//    
+
+    parameter A=0, B=1;   
+    reg state, next_state;  
+
+    always @(*) begin    // This is a combinational always block  
+        case(state) // State transition logic  
+            A: next_state = in?A:B;  
+            B: next_state = in?B:A;  
+            default: next_state = B;  
+        endcase  
+    end  
+
+    always @(posedge clk, posedge areset) begin    // This is a sequential always   block  
+        // State flip-flops with asynchronous reset  
+        if(areset)  
+            state <= B;  
+        else  
+            state <= next_state;  
+    end  
+            
+
+    // Output logic  
+    assign out = (state == B);  
+
+endmodule  
+
+
+另一种写法（狗屎，别用）
+// Note the Verilog-1995 module declaration syntax here:
+module top_module(clk, reset, in, out);
+    input clk;
+    input reset;    // Synchronous reset to state B
+    input in;
+    output out;//  
+    reg out;
+
+    // Fill in state name declarations
+    parameter A=0, B=1; 
+
+    reg present_state, next_state;
+
+    always @(posedge clk) begin
+        if (reset) begin  
+            present_state <= B;
+            out<=1'b1;
+        end else begin
+            case (present_state)
+                A:next_state=in?A:B;
+                B:next_state=in?B:A;
+                default :next_state=B;
+            endcase
+
+            // State flip-flops
+            present_state = next_state;   
+
+            case (present_state)
+               A: out= 1'b0;
+               B: out= 1'b1;// Fill in output logic
+               default:out=1'b1;
+            endcase
+        end
+    end
+
+endmodule  在clk里面必须用阻塞赋值，不然会出错
+另一种方法是不用next_state，第一个case里直接靠in更新out
+
+
+JK触发
+module top_module(  
+    input clk,  
+    input areset,    // Asynchronous reset to OFF  
+    input j,  
+    input k, 
+    output out); //    
+
+    parameter OFF=0, ON=1;   
+    reg state, next_state;  
+ 
+    always @(*) begin   
+        case(state)     
+            OFF: next_state = j?ON:OFF;    
+            ON: next_state = k?OFF:ON;    
+            default: next_state = OFF;    
+        endcase    
+    end   
+
+    always @(posedge clk, posedge areset) begin  
+        if(areset)     
+            state <= OFF;    
+        else    
+            state <= next_state;    
+    end  
+    assign out = (state == ON);  
+
+endmodule  
+
+
+独热编码  每个状态单独占一位  
+module top_module(  
+    input in,  
+    input [3:0] state,  
+    output [3:0] next_state,  
+    output out); //  
+
+    parameter A=0, B=1, C=2, D=3;  
+
+    // State transition logic: Derive an equation for each state flip-flop.  
+    assign next_state[A] = ~in&state[A]|~in&state[C];  
+    assign next_state[B] = in&state[A]|in&state[D]|in&state[B];  
+    assign next_state[C] = ~in&state[B]|~in&state[D];  
+    assign next_state[D] = in&state[C];  
+
+    // Output logic:   
+    assign out = state[D];  
+
+endmodule  
+
+
+状态机练习  
+module top_module(  
+    input clk,  
+    input in,  
+    input areset,  
+    output out); //  
+    reg [1:0]state,next_state;  
+    parameter A=0,B=1,C=2,D=3;   
+    
+    always @(*)begin  
+        case(state)  
+            A: next_state=in?B:A;  
+            B: next_state=in?B:C;  
+            C: next_state=in?D:A;  
+            D: next_state=in?B:C;  
+        endcase  
+    end  
+    
+    always @(posedge clk or posedge areset)begin  
+        if(areset) state <= A;  
+        else state <= next_state;  
+    end  
+    assign out = (state == D );  
+
+endmodule  
+
+
+module top_module (  
+    input clk,  
+    input reset,  
+    input [3:1] s,  // s[3]最高，s[1]最低  
+    output reg fr3,  
+    output reg fr2,  
+    output reg fr1,  
+    output reg dfr  
+);  
+    reg [3:0]state,next_state;    
+    parameter L1=4'b0001;    
+    parameter B21=4'b0010;     
+    parameter B32=4'b0100;     
+    parameter A3=4'b1000;     
+    reg [2:0]fr;  
+    assign {fr3,fr2,fr1} = fr;  
+    
+    always @(posedge clk )begin    
+        if(reset) state <= L1;    
+        else state <= next_state;    
+    end      
+    
+    always @(*)begin    
+        case(s)    
+            3'b000: next_state=L1;    
+            3'b001: next_state=B21;    
+            3'b011: next_state=B32;    
+            3'b111: next_state=A3;    
+        endcase    
+    end    
+     
+    always @(posedge clk )begin    
+        if(reset) fr <= 3'b111;    
+        else   
+            case(next_state)  
+                L1 : fr <= 3'b111;  
+                B21 : fr <= 3'b011;  
+                B32 : fr <= 3'b001;  
+                A3 : fr <= 3'b000;  
+                default: fr <= 3'b111;  
+            endcase  
+    end    
+    
+     always @(posedge clk )begin    
+         if(reset)   
+             dfr <= 1'b1;  //其实就这里一开始写错了。。  
+         else   
+             if(next_state<state)    
+                 dfr <= 1'b1;  
+             else if(next_state>state)   
+                 dfr <= 1'b0;  
+             else   
+                 dfr <= dfr;   
+         
+    end    
+ 
+endmodule  
+
+
+
+
+
+
+Lemmings1   
+module top_module(  
+    input clk,  
+    input areset,    // Freshly brainwashed Lemmings walk left.  
+    input bump_left,  
+    input bump_right,  
+    output walk_left,  
+    output walk_right); //    
+
+    parameter LEFT=0, RIGHT=1;  
+    reg state, next_state;  
+
+    always @(*) begin  
+        case(state)       
+            LEFT: next_state = bump_left?RIGHT:LEFT;      
+            RIGHT: next_state = bump_right?LEFT:RIGHT;         
+        endcase     
+ 
+    end  
+
+    always @(posedge clk, posedge areset) begin  
+        if(areset)       
+            state <= LEFT;      
+        else      
+            state <= next_state;   
+
+    end  
+
+     assign walk_left = (state == LEFT);  
+     assign walk_right = (state == RIGHT);  
+
+endmodule  
+
+
+小鼠游戏2    
+module top_module(  
+    input clk,  
+    input areset,      // Freshly brainwashed Lemmings walk left.  
+    input bump_left,  
+    input bump_right,  
+    input ground,  
+    output walk_left,  
+    output walk_right,  
+    output aaah );   
+    
+    parameter LEFT=0, RIGHT=1,FALL_L=2,FALL_R=3;  
+    reg [1:0]state, next_state;   
+    reg ground1;  
+
+    always @(*) begin    
+        case(state)         
+            LEFT: next_state = ground?(bump_left?RIGHT:LEFT):FALL_L;        
+            RIGHT: next_state = ground?(bump_right?LEFT:RIGHT):FALL_R; 
+            FALL_L: next_state = ground?LEFT:FALL_L;  
+            FALL_R: next_state = ground?RIGHT:FALL_R;  
+        endcase       
+ 
+    end    
+
+    always @(posedge clk, posedge areset) begin    
+        if(areset)         
+            state <= LEFT;        
+        else begin      
+            state <= next_state;   
+            aaah  <= ~ground;  
+        end  
+
+    end    
+
+     assign walk_left = (state == LEFT);    
+     assign walk_right = (state == RIGHT);  
+
+
+endmodule  
