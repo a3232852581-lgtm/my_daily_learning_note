@@ -609,3 +609,176 @@ module top_module (
     end  
    
 endmodule  
+
+
+20250908
+1-12计数  
+module top_module (  
+    input clk,  
+    input reset,  
+    input enable,  
+    output [3:0] Q,  
+    output c_enable,  
+    output c_load,  
+    output [3:0] c_d  
+);   
+    assign c_enable = enable;  
+    assign c_load = (Q == 4'd12 && enable)|| reset ? 1'd1 : 1'd0;  
+    assign c_d = 4'd1; //初始值  
+
+
+    count4 the_counter (clk, c_enable, c_load, c_d ,Q);  
+
+endmodule  
+
+注意assign只能赋值一次  
+计数器BCD不是最高位为1就进位，而是要到9才进位
+用1000计数：  
+
+module top_module (  
+    input clk,  
+    input reset,  
+    output OneHertz,  
+    output [2:0] c_enable  
+); //  
+    wire [11:0]Q;  
+    assign c_enable[0] = 1'b1;  
+    assign c_enable[1] = (Q[3:0]==4'h9);  
+    assign c_enable[2] = (Q[7:0]==8'h99);  
+    assign OneHertz = (Q[11:0]==12'h999);  
+
+    bcdcount counter0 (clk, reset, c_enable[0],Q[3:0]);  
+    bcdcount counter1 (clk, reset, c_enable[1],Q[7:4]);  
+    bcdcount counter2 (clk, reset, c_enable[2],Q[11:8]);  
+
+endmodule  
+注意 使用BCD码计数器要用h，用d就错了
+
+module top_module (
+    input clk,
+    input reset,
+    output OneHertz,
+    output [2:0] c_enable
+); //
+    wire [3:0]Q1,Q2,Q3;
+    assign c_enable[0] = 1'b1;
+    assign c_enable[1] = Q1==4'd9;
+    assign c_enable[2] = (Q2==4'd9)&&Q1==4'd9;
+    assign OneHertz = (Q3 == 4'd9);
+
+    bcdcount counter0 (clk, reset, c_enable[0],Q1);
+    bcdcount counter1 (clk, reset, c_enable[1],Q2);
+    bcdcount counter2 (clk, reset, c_enable[2],Q3);
+endmodule
+错在Q3 == 4'd9只是900不是1000  别忘记：不是最高位有数就进位  
+改成OneHertz = (Q3 == 4'd9)&(Q2==4'd9)&(Q1==4'd9);即可  
+
+4位BCD
+module top_module (
+    input clk,
+    input reset,   // Synchronous active-high reset
+    output [3:1] ena,
+    output [15:0] q);
+    
+    assign ena[1] = (q[3:0] == 4'H9 );
+    assign ena[2] = (q[7:0] == 8'H99 );
+    assign ena[3] = (q[11:0] == 12'H999 ); //这里可以直接用一行大括号写，看个人习惯
+    
+    Count10 cout1(clk,reset,1'b1,q[3:0]);
+    Count10 cout2(clk,reset,ena[1],q[7:4]);
+    Count10 cout3(clk,reset,ena[2],q[11:8]);
+    Count10 cout4(clk,reset,ena[3],q[15:12]);
+
+endmodule
+
+module Count10 (
+    input clk,
+    input reset,
+    input enable,
+    output reg [3:0] q); 
+    
+    always @(posedge clk)begin  
+        if(reset) begin                
+            q <= 4'b0;
+        end
+        else if(enable) begin          
+            if(q == 4'd9) 
+                q <= 4'b0;           
+            else 
+                q <= q + 4'b1;         
+        end
+        else begin
+            q <= q;    // 为防止报错一定要加                  
+        end
+    end  
+
+endmodule
+
+时钟    
+module top_module(  
+    input clk,  
+    input reset,  
+    input ena,  
+    output pm,  
+    output [7:0] hh,  
+    output [7:0] mm,  
+    output [7:0] ss);   
+    wire [1:0]ss_ena,mm_ena;  
+    wire hh_ena;  
+    wire ss_reset,mm_reset;  
+    
+    assign ss_ena = {(ss[3:0] == 4'H9)&&ena,ena};  
+    assign ss_reset = reset||(ss[7:0] == 8'H59 && ena);//ss_ena[1]一定要加，防止振荡  
+    assign mm_ena = {(mm[3:0] == 4'H9)&&(ss[7:0] == 8'H59)&&ena,(ss[7:0] ==   8'H59)&&ena};  //分钟高位的进位不止要低位为1还需要秒位为59
+    assign mm_reset = reset||((mm[7:0] == 8'H59)&&(ss[7:0] == 8'H59) && ena);  
+    assign hh_ena = (mm[7:0] == 8'H59)&&(ss[7:0] == 8'H59)&&ena;  
+    
+    always @(posedge clk) begin  
+        if (reset)begin  
+            hh <= 8'H12;  // 复位为12  
+            pm <= 1'b0;  
+        end  
+        else if (hh_ena) begin  
+            if (hh == 8'H12)begin  
+                hh <= 8'H01;  // 12→1  
+            end  
+            else if (hh == 8'H11)begin  
+                hh <= 8'H12;  // 11→12  
+                pm <= ~pm;  
+            end  
+            else  
+                hh <= (hh[3:0] == 4'd9) ? {hh[7:4]+1'b1, 4'd0} : hh + 1'b1;  
+        end  
+    end  
+    
+    Count10 ss_cout1(clk,ss_reset,ss_ena[0],ss[3:0]);  
+    Count10 ss_cout2(clk,ss_reset,ss_ena[1],ss[7:4]);  
+    Count10 mm_cout1(clk,mm_reset,mm_ena[0],mm[3:0]);  
+    Count10 mm_cout2(clk,mm_reset,mm_ena[1],mm[7:4]);  
+
+endmodule  
+
+module Count10 (   
+    input clk,  
+    input reset,  
+    input enable,  
+    output reg [3:0] q);   
+    
+    always @(posedge clk)begin    
+        if(reset) begin                  
+            q <= 4'b0;  
+        end  
+        else if(enable) begin            
+            if(q == 4'd9)   
+                q <= 4'b0;             
+            else   
+                q <= q + 4'b1;           
+        end  
+        else begin  
+            q <= q;    // 为防止报错一定要加                    
+        end  
+    end    
+
+endmodule   
+
+2025090801![导入图片](images/.png)
