@@ -780,5 +780,5 @@ module Count10 (
     end    
 
 endmodule   
-
-2025090801![导入图片](images/.png)
+参考，主要是他写的使能信号，比我写的要好很多，不容易出错  
+![导入图片](images/2025090801.png)
