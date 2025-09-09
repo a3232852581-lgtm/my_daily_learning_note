@@ -1377,3 +1377,1412 @@ module top_module(
 
 
 endmodule  
+
+
+
+小鼠游戏3  
+module top_module(  
+    input clk,  
+    input areset,    // Freshly brainwashed Lemmings walk left.  
+    input bump_left,  
+    input bump_right,  
+    input ground,  
+    input dig,  
+    output walk_left,  
+    output walk_right,  
+    output aaah,  
+    output digging );   
+    parameter LEFT=6'b000001,   RIGHT=6'b000010,FALL_L=6'b000100,FALL_R=6'b001000,DIG_L=6'b010000,DIG_R=6'b100000;    
+    reg [31:0]state, next_state;     
+
+    always @(*) begin      
+        case(state)           
+            LEFT: next_state = ground?(dig?DIG_L:(bump_left?RIGHT:LEFT)):FALL_L;          
+            RIGHT: next_state = ground?(dig?DIG_R:(bump_right?LEFT:RIGHT)):FALL_R;   
+            FALL_L: next_state = ground?LEFT:FALL_L;    
+            FALL_R: next_state = ground?RIGHT:FALL_R;    
+            DIG_L: next_state = ground?DIG_L:FALL_L;     
+            DIG_R: next_state = ground?DIG_L:FALL_R;    
+            default: next_state = LEFT;  
+        endcase         
+ 
+    end      
+
+    always @(posedge clk, posedge areset) begin      
+        if(areset)           
+            state <= LEFT;          
+        else begin        
+            state <= next_state;     
+        end     
+
+    end      
+    
+
+    assign walk_left = (state == LEFT);      
+    assign walk_right = (state == RIGHT);    
+    assign aaah = (state == FALL_L|state ==FALL_R);   
+    assign digging = (state == DIG_L|state ==DIG_R);   
+endmodule  
+
+
+
+
+
+小鼠游戏4  
+module top_module(   
+    input clk,  
+    input areset,    // Freshly brainwashed Lemmings walk left.  
+    input bump_left,  
+    input bump_right,  
+    input ground,  
+    input dig,  
+    output walk_left,   
+    output walk_right,  
+    output aaah,  
+    output digging );   
+    parameter LEFT=7'b0000001,   RIGHT=7'b0000010,FALL_L=7'b0000100,FALL_R=7'b0001000,DIG_L=7'b0010000,DIG_R=7'b0100000,SPLAT=7'b1000000;    
+    reg [31:0]state, next_state;     
+    reg [31:0]fall_time;  
+    parameter fall_flag=32'd20;  
+
+    
+    always @(posedge clk, posedge areset) begin      
+        if(areset)  
+            fall_time <= 32'd0;  
+        else if(state ==FALL_L|state ==FALL_R)  
+            fall_time <= fall_time + 32'd1;  
+
+        else   
+            fall_time <= 32'd0;  
+
+    end   
+    always @(*) begin   
+        
+        case(state)           
+            LEFT: next_state = ground?(dig?DIG_L:(bump_left?RIGHT:LEFT)):FALL_L;          
+            RIGHT: next_state = ground?(dig?DIG_R:(bump_right?LEFT:RIGHT)):FALL_R;   
+            FALL_L:   
+                if(ground)    
+                    if(fall_time < fall_flag)   
+                        next_state = LEFT;  
+                    else  
+                        next_state = SPLAT;  
+                else  
+                    next_state = state;  
+            FALL_R:   
+                if(ground)  
+                    if(fall_time < fall_flag)  
+                        next_state = RIGHT;  
+                    else  
+                        next_state = SPLAT;  
+                else  
+                    next_state = state;   
+            DIG_L: next_state = ground?DIG_L:FALL_L;    
+            DIG_R: next_state = ground?DIG_R:FALL_R;   
+            SPLAT: next_state = state;  
+            default: next_state = LEFT;  
+        endcase         
+ 
+    end      
+
+    always @(posedge clk, posedge areset) begin      
+        if(areset)  
+            state <= LEFT;   
+        else   
+            state <= next_state;      
+
+    end      
+    
+
+    assign walk_left = (state!=SPLAT)&(state == LEFT);     
+    assign walk_right = (state!=SPLAT)&(state == RIGHT);    
+    assign aaah = (state!=SPLAT)&(state == FALL_L|state ==FALL_R);   
+    assign digging = (state!=SPLAT)&(state == DIG_L|state ==DIG_R);   
+
+
+
+endmodule  
+
+独热  
+module top_module(
+    input in,
+    input [9:0] state,
+    output [9:0] next_state,
+    output out1,
+    output out2);
+    
+    assign next_state[0] = ((|state[4:0])|(|state[9:7]))&~in;
+    assign next_state[1] = ((|state[9:8])|state[0])&in;
+    assign next_state[2] = state[1]&in;
+    assign next_state[3] = state[2]&in;
+    assign next_state[4] = state[3]&in;
+    assign next_state[5] = state[4]&in;
+    assign next_state[6] = state[5]&in;
+    assign next_state[7] = (state[6]|state[7])&in;
+    assign next_state[8] = state[5]&~in;
+    assign next_state[9] = state[6]&~in;
+    
+    assign out1 = |state[9:8];
+    assign out2 = state[7]|state[9];
+    
+endmodule  直接判断那些状态会到达未来状态  
+
+
+
+
+PS2   
+module top_module(  
+    input clk,   
+    input [7:0] in,  
+    input reset,    // Synchronous reset  
+    output done); //  
+    
+    parameter BYTE1 = 0,BYTE2 = 1,BYTE3 = 2,DONE = 3;  
+    reg [32:0]state,next_state;  
+    
+    always @(*)begin  
+        case(state)  
+            BYTE1: next_state=in[3]?BYTE2:BYTE1;  
+            BYTE2: next_state=BYTE3; 
+            BYTE3: next_state=DONE;  
+            DONE:  next_state=in[3]?BYTE2:BYTE1;  
+        endcase  
+    end  
+    
+    always @(posedge clk)begin 
+        if(reset)  
+            state <= BYTE1;  
+        else  
+            state <= next_state;  
+    end  
+    
+    assign done = (state==DONE);  
+endmodule  
+
+
+加个输出  
+module top_module(  
+    input clk,  
+    input [7:0] in,  
+    input reset,    // Synchronous reset  
+    output [23:0] out_bytes,  
+    output done); //  
+
+    parameter BYTE1 = 0,BYTE2 = 1,BYTE3 = 2,DONE = 3;    
+    reg [32:0]state,next_state;    
+    
+    always @(*)begin    
+        case(state)    
+            BYTE1: next_state=in[3]?BYTE2:BYTE1;    
+            BYTE2: next_state=BYTE3;   
+            BYTE3: next_state=DONE;    
+            DONE:  next_state=in[3]?BYTE2:BYTE1;    
+        endcase    
+    end    
+    
+    always @(posedge clk)begin   
+        if(reset)    
+            state <= BYTE1;    
+        else    
+            state <= next_state;    
+    end    
+    
+    assign done = (state==DONE);    
+     
+     always @(posedge clk)begin   
+        if(reset)   
+            out_bytes <= 24'b0;    
+        else    
+            out_bytes <= {out_bytes[15:0],in};    
+    end    
+
+endmodule  
+
+
+串行校验  
+module top_module(  
+    input clk,  
+    input in,  
+    input reset,    // Synchronous reset  
+    output done  
+);   
+    parameter   
+    IDLE = 4'b0000,  
+    START = 4'b0001,    
+    STOP = 4'b0010,  
+    WAIT = 4'b0100;  
+    
+    reg [3:0]state,next_state;  
+    integer data_cnt;  
+    
+     always @(posedge clk)begin  
+        if(reset)  
+            state <= IDLE;  
+        else  
+            state <= next_state;  
+    end  
+    
+    always @(posedge clk)begin  
+        if(reset)  
+            data_cnt <= 0;  
+        else if(state == START)  
+            data_cnt <= data_cnt + 1;  
+        else if(state == WAIT)   
+            data_cnt <= data_cnt;  
+        else  
+            data_cnt <= 0;  
+    end  
+    
+    always @(*)begin  
+        case(state)  
+            IDLE:  
+                if(!in)  
+                    next_state = START;  
+                else  
+                    next_state = state;  
+            START:  
+                if(data_cnt == 8)  
+                    if(in)  
+                        next_state = STOP;  
+                    else  
+                        next_state = WAIT;  
+                else  
+                    next_state = state;  
+            STOP:  
+                if(!in)  
+                    next_state = START;  
+                else  
+                    next_state = IDLE;  
+            WAIT:  
+                if(in)  
+                    next_state = IDLE;  
+                else  
+                    next_state = state;  
+            default: next_state = IDLE;  
+        endcase   
+    end  
+    
+    assign done = (state == STOP);  
+
+endmodule  
+
+
+加数据输出： always @(posedge clk)begin  
+        if(reset)  
+            out_byte <= 8'b0;  
+        else if(state == START&&data_cnt < 8)  
+            out_byte[data_cnt] <= in;  
+        else  
+            out_byte <= out_byte;  
+    end  
+
+
+奇偶校验
+module top_module(
+    input clk,
+    input in,
+    input reset,    // Synchronous reset
+    output [7:0] out_byte,
+    output done
+); //
+
+    parameter   
+    IDLE = 4'b0000,  
+    START = 4'b0001,    
+    STOP = 4'b0010,  
+    WAIT = 4'b0100;  
+    
+    reg [3:0]state,next_state;  
+    integer data_cnt;  
+    wire odd;
+    
+     always @(posedge clk)begin  
+        if(reset)  
+            state <= IDLE;  
+        else  
+            state <= next_state;  
+    end  
+    
+    always @(posedge clk)begin  
+        if(reset)  
+            data_cnt <= 0;  
+        else if(state == START)  
+            data_cnt <= data_cnt + 1;  
+        else if(state == WAIT)   
+            data_cnt <= data_cnt;  
+        else  
+            data_cnt <= 0;  
+    end  
+    
+    always @(*)begin  
+        case(state)  
+            IDLE:  
+                if(!in)  
+                    next_state = START;  
+                else  
+                    next_state = state;  
+            START:  
+                if(data_cnt == 9)  
+                    if(in)  
+                        next_state = STOP;  
+                    else  
+                        next_state = WAIT;  
+                else  
+                    next_state = state;  
+            STOP:  
+                if(!in)  
+                    next_state = START;  
+                else  
+                    next_state = IDLE;  
+            WAIT:  
+                if(in)  
+                    next_state = IDLE;  
+                else  
+                    next_state = state;  
+            default: next_state = IDLE;  
+        endcase   
+    end  
+    
+    assign done = ((state == STOP)&&(odd == 1'b0)); 
+    
+    always @(posedge clk)begin  
+        if(reset)  
+            out_byte <= 8'b0;  
+        else if(state == START&&data_cnt < 8)  
+            out_byte[data_cnt] <= in;  
+        else  
+            out_byte <= out_byte;  
+    end  
+    
+    parity parity1(clk,(state != START),in,odd);
+endmodule
+
+
+自检报错  
+module top_module(
+    input clk,
+    input reset,    // Synchronous reset
+    input in,
+    output disc,
+    output flag,
+    output err);
+    parameter IDLE = 4'b0000,
+    ONE = 4'b0001,
+    TWO = 4'b0010,
+    THREE = 4'b0011,
+    FOUR = 4'b0100,
+    FIVE = 4'b0101,
+    SIX = 4'b0110,
+    DISC = 4'b0111,
+    FLAG = 4'b1000,
+    ERROR = 4'b1001;
+    reg [3:0]state,next_state;  
+    always @(posedge clk)begin  
+        if(reset)  
+            state <= IDLE;  
+        else  
+            state <= next_state;  
+    end  
+    
+       always @(*)begin  
+        case(state)  
+            IDLE:  next_state = in ? ONE:IDLE;
+            ONE:  next_state = in ? TWO:IDLE;
+            TWO:  next_state = in ? THREE:IDLE;
+            THREE:  next_state = in ? FOUR:IDLE;
+            FOUR:  next_state = in ? FIVE:IDLE;
+            FIVE:  next_state = in ? SIX:DISC;
+            SIX:  next_state = in ? ERROR:FLAG;
+            DISC:  next_state = in ? ONE:IDLE;
+            FLAG:  next_state = in ? ONE:IDLE;
+            ERROR:  next_state = in ? ERROR:IDLE;
+                
+        endcase   
+    end  
+    assign disc =( state == DISC);
+    assign flag =( state == FLAG);
+    assign err =( state == ERROR);
+endmodule
+
+
+Q8  
+mealy型  
+module top_module (
+    input clk,
+    input aresetn,    // Asynchronous active-low reset
+    input x,
+    output z ); 
+    parameter Zero=4'b0000,
+    s1=4'b0001,
+    s01=4'b0010,
+    s101=4'b0100;
+    reg [3:0]state,next_state;
+    always @(*)begin
+        case(state)
+            Zero : next_state= x ? s1 : state;
+            s1 : next_state= x ? s1 : s01;
+            s01 : next_state= x ? s101 : Zero;
+            s101 : next_state= x ? s1 : s01;
+        endcase
+    end
+    
+    always @(posedge clk or negedge aresetn)begin
+        if(!aresetn)
+            state <= Zero;
+        else
+            state <= next_state;
+    end
+    assign z = (next_state == s101); //用next_state就是即时输出，用state就慢一个周期
+
+endmodule
+
+
+
+二进制补码  
+补码性质：找到最低位的1并作为状态AB的分界点，进入状态B就只用取反  
+
+module top_module (
+    input clk,
+    input areset,
+    input x,
+    output z
+); 
+    parameter A=0,B=1,C=2,D=3;
+    reg [1:0]state,next_state;
+    
+    always @(posedge clk or posedge areset)begin
+        if(areset) 
+            state <= A;
+        else
+            state <= next_state;
+    end
+    
+    always @(*)begin
+        case(state)
+            A: next_state= x ? B : A;
+            B: next_state= x ? D : C;
+            C: next_state= x ? D : C;
+            D: next_state= x ? D : C;
+            default: next_state = A;
+        endcase
+    end
+        
+    always@(*)begin
+        case(state)
+            A: z = 1'b0;
+            B: z = 1'b1;
+            C: z = 1'b1;
+            D: z = 1'b0;
+            default: z = 1'b0;
+        endcase
+    end
+
+endmodule
+
+
+q3fsm
+module top_module (
+    input clk,
+    input reset,   // Synchronous reset
+    input s,
+    input w,
+    output z
+);
+    parameter A=0,B=1;
+    reg state,next_state;
+    reg [1:0]count,countw;
+    
+        always @(posedge clk)begin
+        if(reset) 
+            state <= A;
+        else
+            state <= next_state;
+    end
+    
+    always @(*)begin
+        case(state)
+            A: next_state= s ? B : A;
+            B: next_state= B;
+            default: next_state = A;
+        endcase
+    end
+        
+    always@(posedge clk)begin
+        if(reset)
+            countw <= 2'd0;
+        else if(state == B)
+            countw <= {countw[0],w};
+        else
+            countw <= 2'd0;  
+    end
+    
+     always@(posedge clk)begin
+        if(reset)
+            count <= 2'd0;
+        else if(state == B)
+            if(count == 2'd2)
+                count <= 2'd0;
+            else
+                count <= count + 2'd1;
+        else
+            count <= 2'd0;  
+    end
+    
+    always@(posedge clk)begin
+        if(reset)
+            z <= 1'b0;
+        else if((state==B)&&(count==2'd2)&&({countw,w} == 3'b110) |({countw,w} == 3'b101) | ({countw,w} == 3'b011))
+            z <= 1'b1;
+        else
+            z <= 1'b0;
+    end
+
+endmodule
+
+
+q3b  
+module top_module (
+    input clk,
+    input reset,   // Synchronous reset
+    input x,
+    output z
+);
+    parameter s000 = 3'b000,s001=3'b001,s010=3'b010,s011=3'b011,s100=3'b100;
+    reg [2:0]state,next_state;
+    always @(*)begin
+        case(state)
+            s000 : next_state = x ? s001 : s000;
+            s001 : next_state = x ? s100 : s001;
+            s010: next_state = x ? s001 : s010;
+            s011: next_state = x ? s010 : s001;
+            s100 : next_state = x ? s100 : s011;
+        endcase
+    end
+    
+    always @(posedge clk)begin
+        if(reset) 
+            state <= s000;
+        else
+            state <= next_state;
+    end
+    
+    assign z = (state==s011|state==s100);
+
+endmodule  
+
+q3C
+module top_module (
+    input clk,
+    input [2:0] y,
+    input x,
+    output Y0,
+    output z
+);
+    parameter s000 = 3'b000,s001=3'b001,s010=3'b010,s011=3'b011,s100=3'b100;
+    reg [2:0]next_state;
+    always @(*)begin
+        case(y)
+            s000 : next_state = x ? s001 : s000;
+            s001 : next_state = x ? s100 : s001;
+            s010: next_state = x ? s001 : s010;
+            s011: next_state = x ? s010 : s001;
+            s100 : next_state = x ? s100 : s011;
+            default: next_state = s000;
+        endcase
+    end
+   
+    
+    assign z = (y==s011||y==s100);
+    assign Y0 = next_state[0];
+
+endmodule
+
+
+
+
+Q6B
+
+module top_module (
+    input [3:1] y,
+    input w,
+    output Y2);
+    
+    parameter A=3'b000,B=3'b001,C=3'b010,D=3'b011,E=3'b100,F=3'b101;
+    reg [3:1]Y;
+    
+    always @(*)begin
+        case(y)
+            A: Y = w ? A : B;
+            B: Y = w ? D : C;
+            C: Y = w ? D : E;
+            D: Y = w ? A : F;
+            E: Y = w ? D : E;
+            F: Y = w ? D : C;
+            default: Y <= A;
+        endcase   
+    end
+    assign Y2 = Y[2];
+
+endmodule
+
+
+
+
+Q6C
+module top_module (
+    input [6:1] y,
+    input w,
+    output Y2,
+    output Y4);
+    parameter A=6'b000001,B=6'b000010,C=6'b000100,D=6'b001000,E=6'b010000,F=6'b100000;
+    reg [6:1]Y;
+    
+    always @(*)begin
+        case(y)
+            A: Y = w ? A : B;
+            B: Y = w ? D : C;
+            C: Y = w ? D : E;
+            D: Y = w ? A : F;
+            E: Y = w ? D : E;
+            F: Y = w ? D : C;
+            default: Y <= A;
+        endcase   
+    end
+    assign Y2 = y[1]&~w;
+    assign Y4 = y[2]&w | y[3]&w | y[5]&w | y[6]&w;
+endmodule
+
+
+Q6 FSM  
+module top_module (
+    input clk,
+    input reset,     // synchronous reset
+    input w,
+    output z);
+    parameter A=6'b000001,B=6'b000010,C=6'b000100,D=6'b001000,E=6'b010000,F=6'b100000;
+    reg [6:1]state,next_state;
+    
+    
+    always @(*)begin
+        case(state)
+            A: next_state = w ? A : B;
+            B: next_state = w ? D : C;
+            C: next_state = w ? D : E;
+            D: next_state = w ? A : F;
+            E: next_state = w ? D : E;
+            F: next_state = w ? D : C;
+            default: next_state <= A;
+        endcase   
+    end
+    
+    always @(posedge clk)begin
+        if(reset) 
+            state <= A;
+        else
+            state <= next_state;
+    end
+    
+    assign z = (state==E)|(state==F);
+
+endmodule  
+
+Q2a
+module top_module (
+    input clk,
+    input reset,   // Synchronous active-high reset
+    input w,
+    output z
+);
+    parameter A=6'b000001,B=6'b000010,C=6'b000100,D=6'b001000,E=6'b010000,F=6'b100000;
+    reg [6:1]state,next_state;
+    
+    
+    always @(*)begin
+        case(state)
+            A: next_state = ~w ? A : B;
+            B: next_state = ~w ? D : C;
+            C: next_state = ~w ? D : E;
+            D: next_state = ~w ? A : F;
+            E: next_state = ~w ? D : E;
+            F: next_state = ~w ? D : C;
+            default: next_state <= A;
+        endcase   
+    end
+    
+    always @(posedge clk)begin
+        if(reset) 
+            state <= A;
+        else
+            state <= next_state;
+    end
+    
+    assign z = (state==E)|(state==F);
+
+endmodule  
+
+
+q2b
+module top_module (
+    input [5:0] y,
+    input w,
+    output Y1,
+    output Y3
+);
+    assign Y1 = y[0]&w;
+    assign Y3 = y[1]&~w|y[2]&~w|y[4]&~w|y[5]&~w;
+
+endmodule
+
+
+
+q2A FSM
+module top_module (
+    input clk,
+    input resetn,    // active-low synchronous reset
+    input [3:1] r,   // request
+    output [3:1] g   // grant
+); 
+    reg [3:1]state,next_state;
+    parameter A=3'b000,B=3'b001,C=3'b010,D=3'b100;
+    always @(*)begin
+        case(state)
+            A:  if(r[1])begin
+                    next_state = B;
+                end
+                else if(r[2])begin
+                    next_state = C;
+                end
+                else if(r[3])begin
+                    next_state = D;
+                end
+                else
+                    next_state = A;
+            B: next_state = r[1] ? B : A ;
+            C: next_state = r[2] ? C : A ;
+            D: next_state = r[3] ? D : A ;
+        endcase
+    end
+    
+    always @(posedge clk)begin
+        if(!resetn) 
+            state <= A;
+        else
+            state <= next_state;
+    end
+    
+    assign g = state;
+
+endmodule  
+
+
+
+
+
+q2b
+module top_module (
+    input clk,
+    input resetn,    // active-low synchronous reset
+    input x,
+    input y,
+    output f,
+    output g
+); 
+    parameter IDLE = 4'd0,S1 = 4'd1,S2 = 4'd2,S3 = 4'd3,S4 = 4'd4,S5 = 4'd5,G_HIGH = 4'd6,G_LOW = 4'd7,F_HIGH=4'd8;
+    reg [3:0]state,next_state;
+    
+    always @(posedge clk)begin
+        if(!resetn) 
+            state <= IDLE;
+        else
+            state <= next_state;
+    end
+    
+    always @(*)begin
+        case(state)
+            IDLE:  next_state = F_HIGH;
+            F_HIGH:  next_state = S1;
+            S1: next_state = x ? S2 : S1 ;
+            S2: next_state = x ? S2 : S3 ;
+            S3: next_state = x ? S4 : S1 ;
+            S4: next_state = y ? G_HIGH : S5 ;
+            S5: next_state = y ? G_HIGH : G_LOW ;
+            G_HIGH: next_state =G_HIGH ;
+            G_LOW: next_state =G_LOW ;
+            default: next_state = IDLE;
+        endcase
+    end
+    
+    assign f = ( state == F_HIGH);
+    assign g = ( state == S4|state == S5|state == G_HIGH);
+
+endmodule
+
+
+
+count1000
+module top_module (
+    input clk,
+    input reset,
+    output [9:0] q);
+
+    always @(posedge clk)begin
+        if(reset) 
+            q <= 10'd0;
+        else if(q == 10'd999)
+            q <= 10'd0;
+        else
+            q <= q + 10'd1;
+    end
+
+endmodule
+
+
+移位或计数器
+module top_module (
+    input clk,
+    input shift_ena,
+    input count_ena,
+    input data,
+    output [3:0] q);
+    always @(posedge clk)
+        case({shift_ena,count_ena})
+            2'b10: q <= {q[2:0],data};
+            2'b01: q <= q-4'd1;
+            default q<=q;
+        endcase
+                
+
+endmodule
+
+
+
+大电路第二部分
+
+module top_module (
+    input clk,
+    input reset,      // Synchronous reset
+    input data,
+    output start_shifting);
+    parameter s=0,s1=1,s11=2,s110=3,s1101=4;
+    reg [2:0]state,next_state;
+    always @(*)
+        case(state)
+            s: next_state = data ? s1 : s;
+            s1:next_state = data ? s11 : s;
+            s11:next_state = data ? s11 : s110;
+            s110:next_state = data ? s1101 : s;
+            s1101:next_state = s1101;
+        endcase
+    
+    always @(posedge clk)
+        if(reset) 
+            state <= s;
+        else
+            state <= next_state;
+    
+    assign start_shifting = (state == s1101);
+            
+
+endmodule
+
+
+
+
+大电路第三部分之四周期使能
+module top_module (
+    input clk,
+    input reset,      // Synchronous reset
+    output shift_ena);
+    parameter s=0,s1=1,s11=2,s110=3,s1101=4;
+    reg [2:0]state,next_state;
+    always @(*)
+        case(state)
+            s: next_state = reset ? s : s1;
+            s1:next_state = reset ? s : s11;
+            s11:next_state = reset ? s : s110;
+            s110:next_state = reset ? s : s1101;
+            s1101:next_state = s1101;
+            default: next_state = s;
+        endcase
+    
+    always @(posedge clk)
+        if(reset) 
+            state <= s;
+        else
+            state <= next_state;
+    
+    assign shift_ena = ~(state == s1101);
+
+endmodule
+
+
+大电路4  
+module top_module (
+    input clk,
+    input reset,      // Synchronous reset
+    input data,
+    output shift_ena,
+    output counting,
+    input done_counting,
+    output done,
+    input ack );
+    
+    parameter s=0,s1=1,s11=2,s110=3,B0=4,B1=5,B2=6,B3=7,Count=8,Wait=9;
+    reg [3:0]state,next_state;
+    always @(*)
+        case(state)
+            s: next_state = data ? s1 : s;
+            s1:next_state = data ? s11 : s;
+            s11:next_state = data ? s11 : s110;
+            s110:next_state = data ? B0 : s;
+            B0: next_state = reset ? B0 : B1;
+            B1:next_state = reset ? B0 : B2;
+            B2:next_state = reset ? B0 : B3;
+            B3:next_state = reset ? B0 : Count;
+            Count:next_state = done_counting ? Wait : Count;
+            Wait:next_state = ack ? s : Wait;
+            default: next_state = s;
+        endcase
+    
+    always @(posedge clk)
+        if(reset) 
+            state <= s;
+        else
+            state <= next_state;
+    
+    assign shift_ena = (state == B0)|(state == B1)|(state == B2)|(state == B3);
+    assign counting = (state == Count);
+    assign done = (state == Wait);
+
+endmodule
+
+
+大电路全部  
+
+module top_module (
+    input clk,
+    input reset,      // Synchronous reset
+    input data,
+    output [3:0] count,
+    output counting,
+    output done,
+    input ack );
+    parameter s=0,s1=1,s11=2,s110=3,B0=4,B1=5,B2=6,B3=7,Count=8,Wait=9;
+    reg [3:0]state,next_state;
+    always @(*)
+        case(state)
+            s: next_state = data ? s1 : s;
+            s1:next_state = data ? s11 : s;
+            s11:next_state = data ? s11 : s110;
+            s110:next_state = data ? B0 : s;
+            B0: next_state = reset ? B0 : B1;
+            B1:next_state = reset ? B0 : B2;
+            B2:next_state = reset ? B0 : B3;
+            B3:next_state = reset ? B0 : Count;
+            Count:next_state = done_counting ? Wait : Count;
+            Wait:next_state = ack ? s : Wait;
+            default: next_state = s;
+        endcase
+    
+    always @(posedge clk)
+        if(reset) 
+            state <= s;
+        else
+            state <= next_state;
+    wire shift_ena;
+    assign shift_ena = (state == B0)|(state == B1)|(state == B2)|(state == B3);
+    assign counting = (state == Count);
+    assign done = (state == Wait);
+    
+    wire done_counting = ((count == 4'd0)&&(cnt==10'd0));
+    
+    always @(posedge clk)
+        if(reset) 
+            count <= 4'd0;
+        else if(shift_ena)
+            count <= {count[2:0],data};
+        else if(counting)
+            count <= (cnt == 10'd0)?count-4'd1:count;
+        else
+            count <= count;
+    reg [9:0]cnt;
+    always @(posedge clk)
+        if(reset) 
+            cnt <= 10'd999;
+        else if(counting)
+            cnt <= (cnt == 10'd0)?10'd999:cnt-10'd1;
+        else
+            cnt <= 10'd999;
+
+endmodule
+
+
+
+
+mux2
+module top_module (
+    input sel,
+    input [7:0] a,
+    input [7:0] b,
+    output [7:0]out  );
+
+    assign out = sel?a:b;
+
+endmodule
+
+
+与非门 
+
+module top_module (input a, input b, input c, output out);//
+    wire out1;
+    andgate inst1 ( .out(out1) ,.a(a), .b(b), .c(c),.d(1'b1),.e(1'b1));
+    assign out = ~out1;
+
+endmodule
+
+
+
+2选一改4选一  
+
+module top_module (
+    input [1:0] sel,
+    input [7:0] a,
+    input [7:0] b,
+    input [7:0] c,
+    input [7:0] d,
+    output [7:0] out  ); //
+
+    wire [7:0]mux0, mux1;
+    mux2 mux_0 ( sel[0],    a,    b, mux0 );
+    mux2 mux_1 ( &sel[0],    c,    d, mux1 );
+    mux2 mux_2 ( sel[1], mux0, mux1,  out );
+
+endmodule
+
+选择器
+module top_module (
+    input [7:0] code,
+    output reg [3:0] out,
+    output reg valid=1 );
+
+    always @(*)begin
+         valid = 1;
+        case (code)
+            8'h45: out = 0;
+            8'h16: out = 1;
+            8'h1e: out = 2;
+            8'h26: out = 3;
+            8'h25: out = 4;
+            8'h2e: out = 5;
+            8'h36: out = 6;
+            8'h3d: out = 7;
+            8'h3e: out = 8;
+            8'h46: out = 9;
+            default: begin valid = 0;
+                           out = 0; //注意两个值都要清零
+            end
+        endcase
+    end
+
+endmodule
+
+
+tb1  按时序图设计一些信号
+module top_module ( output reg A, output reg B );//
+
+    // generate input patterns here
+    initial begin
+        A = 0;
+        B = 0;
+        #10 A = 1;
+        #5 B = 1; //10+5
+        #5 A = 0; //10+5+5
+        #20 B = 0;
+
+    end
+
+endmodule
+
+
+
+
+
+tb  
+module top_module();
+    reg [1:0]in;
+    wire out;
+    andgate and1(in,out);
+    
+    initial begin
+        in = 2'b00;
+        #10 in= 2'b01;
+        #10 in= 2'b10;
+        #10 in= 2'b11;
+    end
+
+endmodule
+
+
+
+
+
+tb2  
+module top_module();
+    reg clk,in;
+    reg [2:0]s;
+    reg out;
+    
+    q7 uut1(clk,in,s,out);
+    
+    initial begin
+        in = 0;
+        s = 3'd2;
+        #10 s = 3'd6;
+        #10 s = 3'd2;
+            in = 1'b1;
+        #10 s = 3'd7;
+            in = 1'b0;
+        #10 s = 3'd0;
+            in = 1'b1;
+        #30 in = 1'b0;
+        
+    end
+    
+    initial clk = 0;
+    always
+        #5 clk = ~clk;
+    
+
+endmodule
+
+
+
+
+tb/tff 测试用例
+module top_module ();
+    reg clk;
+    reg reset;
+    reg t;
+    
+    wire q;
+    
+    tff uut(clk,reset,t,q);
+    
+    always @(posedge clk)
+        if(reset)
+            t <= 1'b0;
+        else
+            t <= 1'b1;
+    
+    initial begin
+        reset = 1'b0;
+        #10
+        reset = 1'b1;
+        #10
+        reset = 1'b0;
+    end
+    
+    //clk
+    initial clk = 0;
+    always #5 clk = ~clk;
+
+endmodule
+
+
+
+
+
+timer
+module top_module(
+	input clk, 
+	input load, 
+	input [9:0] data, 
+	output tc
+);
+
+    reg [9:0] counter;
+    
+    //data input
+    always@(posedge clk)begin
+        if(load)begin
+            counter <= data;
+        end
+        else if(counter)begin
+            counter <= counter - 1;
+        end
+        else begin
+            counter <= 0;
+        end
+    end
+    assign tc = !counter;
+
+endmodule
+
+条件跳转
+module top_module(
+    input clk,
+    input areset,
+    input train_valid,
+    input train_taken,
+    output reg [1:0] state
+);
+ 
+    parameter SNT   =2'b00; 
+    parameter WNT   =2'b01; 
+    parameter WT    =2'b10; 
+    parameter ST    =2'b11; 
+    
+    reg [1:0] next_state;
+    
+    wire SNT2SNT,SNT2WNT;
+    wire WNT2SNT,WNT2WT,WNT2WNT;
+    wire WT2WNT,WT2ST,WT2WT;
+    wire ST2WT,ST2ST;
+    
+    //状态跳转
+    always @(posedge clk, posedge areset) begin
+        if(areset)begin
+            state <= WNT;
+        end
+        else begin
+            state <= next_state;
+        end
+    end
+    
+    //状态跳转控制
+    always @(*) begin
+        case(state)
+            SNT : begin
+                if (SNT2SNT)begin
+                    next_state = SNT;
+                end
+                else if(SNT2WNT)begin
+                    next_state = WNT;
+                end
+            end
+            WNT : begin
+                if (WNT2SNT)begin
+                    next_state = SNT;
+                end
+                else if(WNT2WT)begin
+                    next_state = WT;
+                end
+                else if(WNT2WNT)begin
+                    next_state = WNT;
+                end
+            end
+            WT : begin
+                if (WT2WNT)begin
+                    next_state = WNT;
+                end
+                else if(WT2ST)begin
+                    next_state = ST;
+                end
+                else if(WT2WT)begin
+                    next_state = WT;
+                end
+            end
+            ST : begin
+                if (ST2WT)begin
+                    next_state = WT;
+                end
+                else if(ST2ST)begin
+                    next_state = ST;
+                end
+            end
+            default next_state = WNT;
+        endcase
+    end
+    
+    //状态跳转控制条件
+    assign SNT2SNT  = train_valid && !train_taken || !train_valid;
+    assign SNT2WNT  = train_valid && train_taken;
+    assign WNT2SNT  = train_valid && !train_taken;
+    assign WNT2WT   = train_valid && train_taken;
+    assign WNT2WNT  = !train_valid;
+    assign WT2WNT   = train_valid && !train_taken;
+    assign WT2ST    = train_valid && train_taken;
+    assign WT2WT    = !train_valid;
+    assign ST2WT    = train_valid && !train_taken;
+    assign ST2ST    = train_valid && train_taken || !train_valid;
+ 
+endmodule
+
+分支方向预测器
+module top_module(
+    input clk,
+    input areset,
+ 
+    input predict_valid,
+    input predict_taken,
+    output [31:0] predict_history,
+ 
+    input train_mispredicted,
+    input train_taken,
+    input [31:0] train_history
+);
+    
+    always @(posedge clk, posedge areset) begin
+        if(areset)begin
+            predict_history <= 32'd0;
+        end
+        else if(train_mispredicted )begin
+            predict_history <= {train_history[30:0],train_taken};
+        end
+        else if(predict_valid)begin
+            predict_history <= {predict_history[30:0],predict_taken};
+        end
+        else begin
+            predict_history <= predict_history;
+        end
+    end
+endmodule
+
+分支方向预测器
+
+module top_module(
+    input clk,
+    input areset,
+ 
+    input  predict_valid,
+    input  [6:0] predict_pc,
+    output predict_taken,
+    output [6:0] predict_history,
+ 
+    input train_valid,
+    input train_taken,
+    input train_mispredicted,
+    input [6:0] train_history,
+    input [6:0] train_pc
+);
+    
+    reg [1:0] PHT[127:0];
+    integer i;
+    always@(posedge clk,posedge areset) begin
+        if(areset) begin
+            predict_history <= 7'd0;
+            for(i=0;i<=127;i++) PHT[i] <= 2'b01;
+        end
+        else begin
+            if(train_mispredicted&&train_valid) begin
+                predict_history <= {train_history[5:0],train_taken};            
+            end
+            else if(predict_valid) begin
+                predict_history <= {predict_history[5:0],predict_taken};
+            end
+            if(train_valid) begin
+                if(train_taken) begin //11
+                    PHT[train_pc^train_history] <= (PHT[train_pc^train_history] == 2'b11)? PHT[train_pc^train_history]:PHT[train_pc^train_history] + 2'd1;
+                end
+                else begin //10               
+                    PHT[train_pc^train_history] <= (PHT[train_pc^train_history] == 2'b00)? PHT[train_pc^train_history]:PHT[train_pc^train_history] - 2'd1;
+                end            
+            end           
+        end
+    end
+    assign predict_taken = PHT[predict_pc^predict_history][1];
+ 
+endmodule
+
+
+刷完了！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
