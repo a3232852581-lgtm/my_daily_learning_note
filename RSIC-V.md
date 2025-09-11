@@ -80,5 +80,20 @@ clk在u_tinyriscv里
 找到想看的信号，点一下zoom fit即可，按加号放大
 ![](images/2025091102.png)
 可以很明显看出pc寄存器每个时钟周期+4
+inst和inst.data里的值对应
 
 
+指令python ./test_all_isa.py  可以测试所有指令 （输入一半后可以按tab进行自动补齐）
+.bin 就是二进制文件
+
+
+新的指令测试程序
+cd sim/compliance_test执行python ./compliance_test.py ../../tests/riscv-compliance/build_generated/rv32i/I-ADD-01.elf.bin inst.data
+
+fail
+从 wc -c 的结果来看，inst.data 的大小是 19593 字节，而原始的 I-ADD-01.elf.bin 是 8708 字节，两者大小差异明显（inst.data 反而更大），这显然不符合正常的指令转换逻辑（通常指令数据文件大小应小于或等于原始二进制文件）。这说明脚本在处理 .bin 文件生成 inst.data 时可能出现了错误。
+
+找到问题了。。因为之前我下程序的时候一开始因为network连不上ip的原因，用windows的cmd跑了一遍git clone https://gitee.com/liangkangnan/tinyriscv.git直接从win上面移植到虚拟机，脚本文件的换行符是Windows 风格的换行符（CRLF），所以应该就是这个原因导致内存爆了，之后换了个Linux直接下的tinyriscv一下就成功了
+
+批量改换行符
+find /home/rocky/Desktop/work/risc_v/tinyriscv -type f -exec dos2unix {} \;
