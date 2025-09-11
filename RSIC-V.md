@@ -72,4 +72,6 @@ python已经运行，但是有语法错误---由于现在的python软链还是2.
 
 发现还是有很多iverilog的文件存储位置不对，按ln -s /home/rocky/iverilog/tgt-vvp/vvp.tgt /home/rocky/iverilog/lib/ivl/vvp.tgt的方法改了一下文件位置，不知道还有没有别的错的
 
+![](images/测试图片.png)
+
 
