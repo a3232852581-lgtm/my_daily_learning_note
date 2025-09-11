@@ -74,4 +74,11 @@ python已经运行，但是有语法错误---由于现在的python软链还是2.
 
 ![](images/2025091101.png)
 
+生成一个新文件tinyriscv_soc_tb.vcd，可以用gtkwave打开看波形
+
+clk在u_tinyriscv里
+找到想看的信号，点一下zoom fit即可，按加号放大
+![](images/2025091102.png)
+可以很明显看出pc寄存器每个时钟周期+4
+
 
