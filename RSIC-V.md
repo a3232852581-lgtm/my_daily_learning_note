@@ -52,3 +52,24 @@ RSIC-V 干净、开源  设计CPU SOC 开发能力
 LINUX 和 windows 我都准备跑一遍
 先跑VMWare  由于之前的centos7是直接移植的，这次准备跟着视频重新从零开始装个新的，安装包下载3小时，明天再继续搭环境。
 
+20520911
+预计使用centOS7环境，目前环境已经安装的差不多了
+
+
+risc-v运行及测试 参考https://www.bilibili.com/video/BV1TF411B7Kh?spm_id_from=333.788.videopod.sections&vd_source=33e023647aa5a3b2b8e3d890546be051
+
+**以下都是linux环境**
+打开tinyrisc-v sim目录（simulation）打开终端，执行
+python .\sim_new_nowave.py ..\tests\isa\generated\rv32ui-p-add.bin inst.data  
+会报错  
+linux环境下划线是向左的python ./sim_new_nowave.py ../tests/isa/generated/rv32ui-p-add.bin inst.data
+出错 ，报错
+  File "./sim_new_nowave.py", line 8
+SyntaxError: Non-ASCII character '\xe4' in file ./sim_new_nowave.py on line 8, but no encoding declared; see http://www.python.org/peps/pep-0263.html for details  
+python已经运行，但是有语法错误---由于现在的python软链还是2.7.5  
+删除原本软链接 rm /usr/bin/python（root权限）
+添加新软链ln -s /usr/local/python3/bin/python3.7 /usr/bin/python
+
+发现还是有很多iverilog的文件存储位置不对，按ln -s /home/rocky/iverilog/tgt-vvp/vvp.tgt /home/rocky/iverilog/lib/ivl/vvp.tgt的方法改了一下文件位置，不知道还有没有别的错的
+
+
