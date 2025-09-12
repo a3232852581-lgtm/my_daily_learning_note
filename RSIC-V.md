@@ -97,3 +97,25 @@ fail
 
 批量改换行符
 find /home/rocky/Desktop/work/risc_v/tinyriscv -type f -exec dos2unix {} \;
+
+
+进入超级模式 su root
+
+C语言适配  tests\example\simple目录
+make 编译
+进入  sim
+python ./sim_new_nowave.py ../tests/example/simple/simple.bin inst.data
+报错  
+rocky@icerlab:~/Desktop/work/risc_v/riscv_backups/tinyriscv/tests/example/simple
+$ make
+/home/rocky/Desktop/work/risc_v/riscv_backups/tinyriscv/tools/gnu-mcu-eclipse-riscv-none-gcc-8.2.0-2.2-20190521-0004-win64/bin/riscv-none-embed-gcc -DSIMULATION -march=rv32im -mabi=ilp32 -mcmodel=medlow -ffunction-sections -fdata-sections -fno-builtin-printf -fno-builtin-malloc -I.. -c -o ../start.o ../start.S
+make: /home/rocky/Desktop/work/risc_v/riscv_backups/tinyriscv/tools/gnu-mcu-eclipse-riscv-none-gcc-8.2.0-2.2-20190521-0004-win64/bin/riscv-none-embed-gcc: Command not found
+make: *** [../start.o] Error 127
+因为工具链是win系统的 没修改
+修改common.hk
+vim v+k批量选中  冒号s/riscv-none-embed/riscv64-unknown-elf/g
+批量替换
+
+修改后成功  
+
+.c -> make(riscvwen工具链) -> BIN -> MEM文件 -> 存储到rom
